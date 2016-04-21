@@ -6,7 +6,7 @@
 {% block content %}
 <div class="row">
     <div class="col-sm-12">
-        <h1 class="text-center"> {{ project.project_name }}</h1>
+        <h1 class="text-center"> {{ project.name }}</h1>
         <div class="text-center"> by {{ project.creator.first_name }} {{project.creator.last_name}}</div>
     </div>
 </div>
@@ -31,11 +31,11 @@
         </div>
 
         <div class="panel">
-            <span class="project-vitals">${{ project.total_pledges }}</span> <br/> pledges of ${{ project.goal_amount }} goal
+            <span class="project-vitals">${{ project.total_pledges }}</span> <br/> pledged of ${{ project.goal_amount }} goal
         </div>
 
         <div class="panel">
-            <span class="project-vitals">{{ project.num_pdays_left }}</span> days left
+            <span class="project-vitals">{{ project.num_days_left }}</span> days left
         </div>
 
         <div class="panel">
