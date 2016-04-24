@@ -3,6 +3,8 @@ from flask import Flask, render_template, request, redirect, url_for, abort
 from flask.ext.script import Manager
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.migrate import Migrate, MigrateCommand
+import cloudinary.uploader
+
 
 app = Flask(__name__)
 manager = Manager(app)
@@ -12,7 +14,8 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 manager.add_command('db', MigrateCommand)
 
-from punchstarter.models import  *
+from punchstarter.models import *
+
 
 @app.route("/")
 def hello():
@@ -26,18 +29,30 @@ def create():
     if request.method == "POST":
         # handle form
         print request.form
+        print request.files
         now = datetime.datetime.now()
         time_end = request.form.get('funding_end_date')
         time_end = datetime.datetime.strptime(time_end, '%Y-%m-%d')
+
+        # upload cover photo
+        cover_photo = request.files['cover_photo']
+        uploaded_image = cloudinary.uploader.upload(
+            cover_photo,
+            crop='limit',
+            width=680,
+            height=550
+        )
+        image_filename = uploaded_image['public_id']
         new_project = Project(
-            member_id = 1, #guest creator
-            name = request.form.get("project_name"),
-            short_description = request.form.get('short_description'),
-            long_description = request.form.get('long_description'),
-            goal_amount = request.form.get('funding_goal'),
-            time_start = now,
-            time_end = time_end,
-            time_created = now
+            member_id=1,  # guest creator
+            name=request.form.get("project_name"),
+            short_description=request.form.get('short_description'),
+            long_description=request.form.get('long_description'),
+            goal_amount=request.form.get('funding_goal'),
+            image_filename=image_filename,
+            time_start=now,
+            time_end=time_end,
+            time_created=now
         )
 
         db.session.add(new_project)
@@ -61,17 +76,31 @@ def pledge(project_id):
     if not project:
         abort(404)
     if request.method == "GET":
-
         return render_template("pledge.html", project=project)
     if request.method == "POST":
         guest_pledgor = db.session.query(Member).filter_by(id=2).one()
-        new_pledge=Pledge(
-            member_id = guest_pledgor.id,
-            project_id = project.id,
-            amount = request.form.get('amount'),
-            time_created = datetime.datetime.now()
+        new_pledge = Pledge(
+            member_id=guest_pledgor.id,
+            project_id=project.id,
+            amount=request.form.get('amount'),
+            time_created=datetime.datetime.now()
         )
         db.session.add(new_pledge)
         db.session.commit()
 
         return redirect(url_for('project_detail', project_id=project.id))
+
+
+@app.route('/search/')
+def search():
+    query = request.args.get("q") or ""
+    projects = db.session.query(Project).filter(
+        Project.name.ilike('%' + query + '%') |
+        Project.short_description.ilike('%' + query + '%')  |
+        Project.long_description.ilike('%' + query + '%')
+    ).all()
+    project_count = len(projects)
+    return render_template('search.html',
+                           query_text=query,
+                           projects=projects,
+                           proejct_count=project_count)

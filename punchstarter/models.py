@@ -1,6 +1,7 @@
 from punchstarter import db
 from sqlalchemy.sql import func
 import datetime
+import cloudinary.utils
 
 
 class Member(db.Model):
@@ -18,6 +19,7 @@ class Project(db.Model):
     short_description = db.Column(db.Text)
     long_description = db.Column(db.Text)
     goal_amount = db.Column(db.Integer)
+    image_filename = db.Column(db.String(200))
     time_start = db.Column(db.DateTime)
     time_end = db.Column(db.DateTime)
     time_created = db.Column(db.DateTime)
@@ -36,10 +38,19 @@ class Project(db.Model):
         return total_pledges
 
     @property
+    def percentage_funded(self):
+        return int(self.total_pledges * 100 / self.goal_amount)
+
+    @property
     def num_days_left(self):
         now = datetime.datetime.now()
         num_days_left = (self.time_end - now).days
         return num_days_left
+
+    @property
+    def image_path(self):
+        # to avoid using all this implementation every time
+        return cloudinary.utils.cloudinary_url(self.image_filename)[0]
 
 
 class Pledge(db.Model):
