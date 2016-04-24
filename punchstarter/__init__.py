@@ -3,23 +3,32 @@ from flask import Flask, render_template, request, redirect, url_for, abort
 from flask.ext.script import Manager
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.migrate import Migrate, MigrateCommand
+from flask.ext.security import Security, SQLAlchemyUserDatastore
 import cloudinary.uploader
 
 
+# initialize app
 app = Flask(__name__)
 manager = Manager(app)
 app.config.from_object('punchstarter.default_settings')
 
+# enable database
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 manager.add_command('db', MigrateCommand)
 
 from punchstarter.models import *
 
+# flask security
+from forms import ExtendedRegisterForm
+user_datastore = SQLAlchemyUserDatastore(db, Member, Role)
+security = Security(app, user_datastore, register_form=ExtendedRegisterForm)
+
 
 @app.route("/")
 def hello():
-    return render_template("index.html")
+    projects = db.session.query(Project).order_by(Project.time_created.desc()).limit(15)
+    return render_template("index.html", projects=projects)
 
 
 @app.route("/projects/create/", methods=['GET', 'POST'])
